@@ -5,11 +5,9 @@ import cgi, cgitb
 import dna_design
 import constants as c
 
-
-
-print "Optimal sequence"
-
 cgitb.enable()
+
+print('Content-type: text/html\nAccess-Control-Allow-Origin: *\n')
 
 form = cgi.FieldStorage()
 text = form.getfirst("text")
@@ -17,7 +15,6 @@ n = form.getfirst("number")
 sequence_list = []
 for amino in text.splitlines():
     sequence_list.append(amino)
-print('Content-type: text/html\nAccess-Control-Allow-Origin: *\n')
 
 try:
     result_base, generated_aminos = dna_design.optimize(sequence_list, int(n))
