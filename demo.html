@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css">
+    <link href="style.css" rel="stylesheet">
+    <title>Demo</title>
+  </head>
+
+  <body>
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
+      <a class="navbar-brand" href="#">大学院生の仕事を奪うツール</a>
+    </nav>
+
+    <div class="container">
+      <div>
+      <form id="form" name="form">
+        <div class="form-group row">
+          <label for="Number" class="col-sm-2 col-form-label">合成する配列数</label>
+          <div class="col-sm-10">
+            <input type="number" class="form-control" id="number" value="5" min="1">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="exampleFormControlTextarea1">合成したいアミノ酸（1行に1つ）</label>
+          <textarea class="form-control" id="amino" rows="10" spellcheck="false">GAYY
+GAHY
+GAFY
+GAYH
+GGYY
+GGHY
+GAHH
+GAFH
+GGFY
+GGYH
+GAYW
+GGHH
+GAHF
+GAFF</textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+      </form>
+      </div>
+      <div style="margin-top: 3rem">
+        <h2>設計結果</h2>
+        <div id="result">
+        </div>
+      </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/js/bootstrap.min.js"></script>
+    <script type="text/javascript">
+$(document).ready(function() {
+  $('#form').submit(function() {
+    event.preventDefault();
+    var $form = $(this);
+    $.ajax({
+      url: 'http://localhost:8000/cgi-bin/test.py',
+      type: 'post',
+      dataType: 'text',
+      data: {
+        text: $('#amino').val(),
+        number: $('#number').val()
+      },
+    })
+    .done(function(response) {
+      $('#result').html(response);
+    })
+    .fail(function() {
+      $('#result').html('通信エラーが発生しました');
+    });
+  });
+});
+</script>
+</body>
+</html>
