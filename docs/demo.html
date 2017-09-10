@@ -10,7 +10,7 @@
 
   <body>
     <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
-      <a class="navbar-brand" href="#">大学院生の仕事を奪うツール</a>
+      <a class="navbar-brand" href="#">塩基配列設計</a>
     </nav>
 
     <div class="container">
@@ -58,7 +58,7 @@ $(document).ready(function() {
     event.preventDefault();
     var $form = $(this);
     $.ajax({
-      url: 'http://localhost:8000/cgi-bin/test.py',
+      url: 'http://133.130.106.50:8000/cgi-bin/demo.py',
       type: 'post',
       dataType: 'text',
       data: {
