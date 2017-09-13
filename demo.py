@@ -7,16 +7,16 @@ import constants as c
 
 cgitb.enable()
 
-print('Content-type: text/html\nAccess-Control-Allow-Origin: *\n')
-
-form = cgi.FieldStorage()
-text = form.getfirst("text")
-n = form.getfirst("number")
-sequence_list = []
-for amino in text.splitlines():
-    sequence_list.append(amino)
+print('Content-type: text/html')
+print('Access-Control-Allow-Origin: *\n')
 
 try:
+    form = cgi.FieldStorage()
+    text = form.getfirst("text")
+    n = form.getfirst("number")
+    sequence_list = []
+    for amino in text.splitlines():
+        sequence_list.append(amino)
     result_base, generated_aminos = dna_design.optimize(sequence_list, int(n))
     print('''<table class="table table-striped">
       <thead>
@@ -32,20 +32,21 @@ try:
     print('''  </tbody>
     </table>''')
 
-    print('''<table class="table table-striped">
-      <thead>
-        <tr>
-          <th>合成されるアミノ酸</th>
-          <td>合成対象か？</td>
-        </tr>
-      </thead>
-      <tbody>''')
 
-    for g in generated_aminos:
-        print('<tr>')
-        print('<td>{}</td><td>{}</td>'.format(g, "<span class=\"badge badge-success\">はい</span>" if g in sequence_list else "<span class=\"badge badge-danger\">いいえ</span>"))
-        print('</tr>')
-    print('''  </tbody>
-    </table>''')
+    for seq, aminos in generated_aminos:
+        print('''<table class="table table-striped" style="margin-top:3rem">
+          <thead>
+            <tr>
+              <th>{}から合成されるアミノ酸</th>
+              <th>合成対象か？</th>
+            </tr>
+          </thead>
+          <tbody>'''.format(seq))
+        for amino in aminos:
+            print('<tr>')
+            print('<td>{}</td><td>{}</td>'.format(amino, "<span class=\"badge badge-success\">はい</span>" if amino in sequence_list else "<span class=\"badge badge-danger\">いいえ</span>"))
+            print('</tr>')
+        print('''  </tbody>
+        </table>''')
 except:
     print('<p>エラーが発生しました。合成するアミノ酸の長さが全て同じかどうか確認してください。</p>')

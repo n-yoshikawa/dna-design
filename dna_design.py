@@ -72,8 +72,7 @@ def optimize(amino_list, num_of_seq):
             result_base.append(result)
 
         for r in result_base:
-            for amino in generated_amino(split_n(r, 3)):
-                generated_aminos.append(amino)
+            generated_aminos.append((r, generated_amino(split_n(r, 3))))
     else:
         print 'not satisfiable'
 
