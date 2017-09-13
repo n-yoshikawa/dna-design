@@ -34,14 +34,19 @@ try:
 
 
     for seq, aminos in generated_aminos:
+        total = len(aminos)
+        inlist = 0
+        for amino in aminos:
+            if amino in sequence_list:
+                inlist += 1
         print('''<table class="table table-striped" style="margin-top:3rem">
           <thead>
             <tr>
               <th>{}から合成されるアミノ酸</th>
-              <th>合成対象か？</th>
+              <th>合成対象か？（合成対象の割合: {}/{}）</th>
             </tr>
           </thead>
-          <tbody>'''.format(seq))
+          <tbody>'''.format(seq, inlist, total))
         for amino in aminos:
             print('<tr>')
             print('<td>{}</td><td>{}</td>'.format(amino, "<span class=\"badge badge-success\">はい</span>" if amino in sequence_list else "<span class=\"badge badge-danger\">いいえ</span>"))
