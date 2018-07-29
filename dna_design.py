@@ -54,13 +54,16 @@ def optimize(amino_list, num_of_seq):
         ret = []
         for c1 in cands[0]:
             for c2 in cands[1]:
-                for c3 in cands[2]:
-                    for c4 in cands[3]:
-                        ret.append(c1+c2+c3+c4)
+                ret.append(c1+c2)
+        #for c1 in cands[0]:
+        #    for c2 in cands[1]:
+        #        for c3 in cands[2]:
+        #            for c4 in cands[3]:
+        #                ret.append(c1+c2+c3+c4)
         return ret
 
     def split_n(text, n):
-        return [text[i*n:i*n+n] for i in range(len(text)/n)]
+        return [text[i*n:i*n+n] for i in range(len(text)//n)]
 
     h = opt.minimize(cost)
     result_base = []
@@ -72,8 +75,8 @@ def optimize(amino_list, num_of_seq):
             result_base.append(result)
 
         for r in result_base:
-            generated_aminos.append((r, generated_amino(split_n(r, 3))))
+            generated_aminos.append(generated_amino(split_n(r, 3)))
     else:
-        print 'not satisfiable'
+        print('not satisfiable')
 
-    return result_base, generated_aminos
+    return (result_base, generated_aminos)
