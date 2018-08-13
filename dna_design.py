@@ -1,3 +1,6 @@
+import math
+import itertools
+
 from z3 import *
 from constants import *
 from constraints import *
@@ -17,11 +20,11 @@ def optimize(amino_list, num_of_seq):
 
     opt = Optimize()
     # all variable is 0 or 1
-    for prime in range(num_of_seq):
+    for primer in range(num_of_seq):
         for pos in range(base_length):
             for base in bases:
-                opt.add(x[prime][pos][base] >= 0)
-                opt.add(x[prime][pos][base] <= 1)
+                opt.add(x[primer][pos][base] >= 0)
+                opt.add(x[primer][pos][base] <= 1)
 
     # gap is not allowed
     for i in range(num_of_seq):
@@ -40,7 +43,6 @@ def optimize(amino_list, num_of_seq):
     cost = Int('cost')
     opt.add(cost==sum([x[i][j][b] for b in bases for j in range(base_length) for i in range(num_of_seq)]))
 
-
     def generated_amino(seqs):
         cands = []
         for seq in seqs:
@@ -51,32 +53,56 @@ def optimize(amino_list, num_of_seq):
                         cand.append(codon[b1+b2+b3])
             cands.append(cand)
 
-        ret = []
-        for c1 in cands[0]:
-            for c2 in cands[1]:
-                ret.append(c1+c2)
-        #for c1 in cands[0]:
-        #    for c2 in cands[1]:
-        #        for c3 in cands[2]:
-        #            for c4 in cands[3]:
-        #                ret.append(c1+c2+c3+c4)
+        ret = [''.join(x) for x in itertools.product(*cands)]
+
         return ret
+
 
     def split_n(text, n):
         return [text[i*n:i*n+n] for i in range(len(text)//n)]
 
     h = opt.minimize(cost)
-    result_base = []
-    generated_aminos = []
     if opt.check() == sat:
         model = opt.model()
+        best_cost = int("{}".format(model[cost]))
+    else:
+        best_cost = -100
+    best_expected = float("inf")
+    best_base = []
+    best_aminos = []
+    count = 0
+
+    while opt.check() == sat and count < 20:
+        count += 1
+        model = opt.model()
+        current_cost = int("{}".format(model[cost]))
+        if current_cost > best_cost:
+            break
+        result_base = []
+        generated_aminos = []
         for n in range(num_of_seq):
             result = "".join([dict2base(model, x[n][pos]) for pos in range(base_length)])
             result_base.append(result)
 
         for r in result_base:
             generated_aminos.append(generated_amino(split_n(r, 3)))
-    else:
-        print('not satisfiable')
 
-    return (result_base, generated_aminos)
+        print(result_base, generated_aminos)
+        expected = 0
+        for sequence, aminos in zip(result_base, generated_aminos):
+            n = 0
+            for target in amino_list:
+                if target in aminos:
+                    n += 1
+            expected += len(aminos) * math.log(n+0.01)
+
+        if expected < best_expected:
+            best_expected = expected
+            best_base = result_base
+            best_aminos = generated_aminos
+
+        # add condition to get different solution
+        opt.add(Or([x[primer][pos][base] != opt.model()[x[primer][pos][base]] for base in bases for pos in range(base_length) for primer in range(num_of_seq)]))
+        h = opt.minimize(cost)
+
+    return (best_base, best_aminos)
