@@ -40,8 +40,8 @@ def optimize(amino_list, num_of_seq):
         opt.add(Or([seq2constraint(seq, p) for p in range(num_of_seq)]))
 
     # object function: smaller ambiguity is better solution
-    cost = Int('cost')
-    opt.add(cost==sum([x[i][j][b] for b in bases for j in range(base_length) for i in range(num_of_seq)]))
+    cost = Real('cost')
+    opt.add(cost==sum([reduce(lambda x, y: x*y, [sum([x[i][j][b] for b in bases]) for j in range(base_length)]) for i in range(num_of_seq)]))
 
     def generated_amino(seqs):
         cands = []

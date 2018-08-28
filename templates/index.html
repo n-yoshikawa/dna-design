@@ -70,6 +70,7 @@
           <tr>
             <th>Sequence</th>
             <td>Generated Amino acids</td>
+            <td># of target aminos / # of generated aminos</td>
           </tr>
         </thead>
         <tbody>
@@ -92,6 +93,7 @@
                 </li>
               </ul>
             </td>
+            <td> [[result.amino.filter(function(a){return sequences.indexOf(a) >= 0}).length]] / [[ result.amino.length ]] </td>
           </tr>
         </tbody>
       </table>
