@@ -1,5 +1,6 @@
 import math
 import itertools
+import operator
 
 from z3 import *
 from constants import *
@@ -16,6 +17,9 @@ def optimize(amino_list, num_of_seq):
     # variables to describe constraints
     bases = ['A', 'C', 'G', 'U']
     x = [[{base: Int("x-{}-{}-{}".format(seq, pos, base)) for base in bases} for pos in range(base_length)] for seq in range(num_of_seq)]
+    epsilon = Int("epsilon")
+    delta = [Int("delta-{}".format(i)) for i in range(num_of_seq)]
+    c = Int("c")
 
 
     opt = Optimize()
@@ -26,12 +30,14 @@ def optimize(amino_list, num_of_seq):
                 opt.add(x[primer][pos][base] >= 0)
                 opt.add(x[primer][pos][base] <= 1)
 
-    # gap is not allowed
+    # nonnegative value
+    opt.add(epsilon >= 0)
     for i in range(num_of_seq):
-        for j in range(base_length):
-            opt.add(sum([x[i][j][b] for b in bases]) >= 1)
+        opt.add(delta[i] >= 0)
+    opt.add(c == 1)
 
-    # helper function: whole amino acid sequence will be synthesized
+
+    # helper function: all amino acids in the given sequence will be synthesized
     def seq2constraint(s, p):
         return And([amino2constraint[s[i]](x, p, i) for i in range(seq_len)])
 
@@ -39,10 +45,29 @@ def optimize(amino_list, num_of_seq):
     for seq in amino_list:
         opt.add(Or([seq2constraint(seq, p) for p in range(num_of_seq)]))
 
-    # object function: smaller ambiguity is better solution
-    cost = Real('cost')
-    opt.add(cost==sum([reduce(lambda x, y: x*y, [sum([x[i][j][b] for b in bases]) for j in range(base_length)]) for i in range(num_of_seq)]))
+    # gap is not allowed
+    for i in range(num_of_seq):
+        for j in range(base_length):
+            opt.add(sum([x[i][j][b] for b in bases]) >= 1)
 
+    for i in range(num_of_seq):
+        opt.add(sum([x[i][j][b] for j in range(base_length) for b in bases]) <= epsilon + delta[i])
+
+
+    # at least one amino acid is satisfied by a primer
+    #for primer in range(num_of_seq):
+    #    opt.add(Or([seq2constraint(seq, primer) for seq in amino_list]))
+
+    #for primer in range(num_of_seq):
+    #    for pos in range(seq_len):
+    #        opt.add(sum([x[primer][p][base] for base in bases for p in [3*pos,3*pos+1,3*pos+2]]) <= 4)
+
+    # object function: smaller ambiguity is better solution
+    cost = Int('cost')
+    opt.add(cost == epsilon + c * sum([delta[i] for i in range(num_of_seq)]))
+    #opt.add(cost==sum([x[i][j][b] for b in bases for j in range(base_length) for i in range(num_of_seq)]))
+
+    # Enumerate amino acid sequences from given nucleotide sequence
     def generated_amino(seqs):
         cands = []
         for seq in seqs:
@@ -61,6 +86,7 @@ def optimize(amino_list, num_of_seq):
     def split_n(text, n):
         return [text[i*n:i*n+n] for i in range(len(text)//n)]
 
+    print('Minimizing...')
     h = opt.minimize(cost)
     if opt.check() == sat:
         model = opt.model()
@@ -72,10 +98,12 @@ def optimize(amino_list, num_of_seq):
     best_aminos = []
     count = 0
 
-    while opt.check() == sat and count < 20:
+    while opt.check() == sat and count < 1:
         count += 1
         model = opt.model()
         current_cost = int("{}".format(model[cost]))
+        print("epsilon: {}".format(int("{}".format(model[epsilon]))))
+        print("delta: {}".format([int("{}".format(model[delta[i]])) for i in range(num_of_seq)]))
         if current_cost > best_cost:
             break
         result_base = []
@@ -94,15 +122,16 @@ def optimize(amino_list, num_of_seq):
             for target in amino_list:
                 if target in aminos:
                     n += 1
-            expected += len(aminos) * math.log(n+0.01)
+            expected += len(aminos) * (math.log(n+0.01)+0.5772)
 
         if expected < best_expected:
             best_expected = expected
             best_base = result_base
             best_aminos = generated_aminos
+        break
 
         # add condition to get different solution
-        opt.add(Or([x[primer][pos][base] != opt.model()[x[primer][pos][base]] for base in bases for pos in range(base_length) for primer in range(num_of_seq)]))
-        h = opt.minimize(cost)
+        #opt.add(Or([x[primer][pos][base] != opt.model()[x[primer][pos][base]] for base in bases for pos in range(base_length) for primer in range(num_of_seq)]))
+        #h = opt.minimize(cost)
 
     return (best_base, best_aminos)
