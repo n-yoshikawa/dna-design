@@ -1,10 +1,15 @@
-import math
+import functools
 import itertools
+import math
 import operator
 
 from z3 import *
+
 from constants import *
 from constraints import *
+
+def prod(iterable):
+    return functools.reduce(operator.mul, iterable)
 
 def optimize(amino_list, num_of_seq):
     # check if all sequence length is the same
@@ -20,6 +25,7 @@ def optimize(amino_list, num_of_seq):
     epsilon = Int("epsilon")
     delta = [Int("delta-{}".format(i)) for i in range(num_of_seq)]
     c = Int("c")
+    size = Int("size")
 
 
     opt = Optimize()
@@ -50,22 +56,17 @@ def optimize(amino_list, num_of_seq):
         for j in range(base_length):
             opt.add(sum([x[i][j][b] for b in bases]) >= 1)
 
+    # constraint of number of random base per primer
     for i in range(num_of_seq):
         opt.add(sum([x[i][j][b] for j in range(base_length) for b in bases]) <= epsilon + delta[i])
-
-
-    # at least one amino acid is satisfied by a primer
-    #for primer in range(num_of_seq):
-    #    opt.add(Or([seq2constraint(seq, primer) for seq in amino_list]))
-
-    #for primer in range(num_of_seq):
-    #    for pos in range(seq_len):
-    #        opt.add(sum([x[primer][p][base] for base in bases for p in [3*pos,3*pos+1,3*pos+2]]) <= 4)
 
     # object function: smaller ambiguity is better solution
     cost = Int('cost')
     opt.add(cost == epsilon + c * sum([delta[i] for i in range(num_of_seq)]))
     #opt.add(cost==sum([x[i][j][b] for b in bases for j in range(base_length) for i in range(num_of_seq)]))
+
+    # total number of generated amino acids
+    opt.add(size == sum([prod([sum([x[i][j][b] for b in bases]) for j in range(base_length)]) for i in range(num_of_seq)]))
 
     # Enumerate amino acid sequences from given nucleotide sequence
     def generated_amino(seqs):
@@ -89,49 +90,53 @@ def optimize(amino_list, num_of_seq):
     print('Minimizing...')
     h = opt.minimize(cost)
     if opt.check() == sat:
-        model = opt.model()
-        best_cost = int("{}".format(model[cost]))
-    else:
-        best_cost = -100
-    best_expected = float("inf")
-    best_base = []
-    best_aminos = []
-    count = 0
+        initial_model = opt.model()
+        initial_size = int("{}".format(initial_model[size]))
+        initial_cost = int("{}".format(initial_model[cost]))
 
-    while opt.check() == sat and count < 1:
+    best_size = initial_size
+    best_model = initial_model
+
+    count = 0
+    while opt.check() == sat:
         count += 1
-        model = opt.model()
-        current_cost = int("{}".format(model[cost]))
-        print("epsilon: {}".format(int("{}".format(model[epsilon]))))
-        print("delta: {}".format([int("{}".format(model[delta[i]])) for i in range(num_of_seq)]))
-        if current_cost > best_cost:
+        if count > 100:
             break
+        model = opt.model()
+        current_size = int("{}".format(model[size]))
+        if current_size < best_size:
+            best_size = current_size
+            best_model = model
+
         result_base = []
-        generated_aminos = []
         for n in range(num_of_seq):
             result = "".join([dict2base(model, x[n][pos]) for pos in range(base_length)])
             result_base.append(result)
-
+        generated_aminos = []
         for r in result_base:
             generated_aminos.append(generated_amino(split_n(r, 3)))
 
+        print("cost: {}".format(int("{}".format(model[cost]))))
+        print("epsilon: {}".format(int("{}".format(model[epsilon]))))
+        print("delta: {}".format([int("{}".format(model[delta[i]])) for i in range(num_of_seq)]))
+        print("size: {}".format(int("{}".format(model[size]))))
         print(result_base, generated_aminos)
-        expected = 0
-        for sequence, aminos in zip(result_base, generated_aminos):
-            n = 0
-            for target in amino_list:
-                if target in aminos:
-                    n += 1
-            expected += len(aminos) * (math.log(n+0.01)+0.5772)
 
-        if expected < best_expected:
-            best_expected = expected
-            best_base = result_base
-            best_aminos = generated_aminos
-        break
+        opt.add(Or([x[primer][pos][base] != opt.model()[x[primer][pos][base]] for base in bases for pos in range(base_length) for primer in range(num_of_seq)]))
 
-        # add condition to get different solution
-        #opt.add(Or([x[primer][pos][base] != opt.model()[x[primer][pos][base]] for base in bases for pos in range(base_length) for primer in range(num_of_seq)]))
-        #h = opt.minimize(cost)
+    model = best_model
+    result_base = []
+    for n in range(num_of_seq):
+        result = "".join([dict2base(model, x[n][pos]) for pos in range(base_length)])
+        result_base.append(result)
+    generated_aminos = []
+    for r in result_base:
+        generated_aminos.append(generated_amino(split_n(r, 3)))
 
-    return (best_base, best_aminos)
+    print("cost: {}".format(int("{}".format(model[cost]))))
+    print("epsilon: {}".format(int("{}".format(model[epsilon]))))
+    print("delta: {}".format([int("{}".format(model[delta[i]])) for i in range(num_of_seq)]))
+    print("size: {}".format(int("{}".format(model[size]))))
+    print(result_base, generated_aminos)
+
+    return (result_base, generated_aminos)
