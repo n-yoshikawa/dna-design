@@ -2,6 +2,7 @@ import functools
 import itertools
 import math
 import operator
+import time
 
 from z3 import *
 
@@ -97,11 +98,11 @@ def optimize(amino_list, num_of_seq):
     best_size = initial_size
     best_model = initial_model
 
+    begin_time = time.time()
     count = 0
+    print("count,time,cost,epsilon,delta,size")
     while opt.check() == sat:
         count += 1
-        if count > 100:
-            break
         model = opt.model()
         current_size = int("{}".format(model[size]))
         if current_size < best_size:
@@ -116,11 +117,9 @@ def optimize(amino_list, num_of_seq):
         for r in result_base:
             generated_aminos.append(generated_amino(split_n(r, 3)))
 
-        print("cost: {}".format(int("{}".format(model[cost]))))
-        print("epsilon: {}".format(int("{}".format(model[epsilon]))))
-        print("delta: {}".format([int("{}".format(model[delta[i]])) for i in range(num_of_seq)]))
-        print("size: {}".format(int("{}".format(model[size]))))
-        print(result_base, generated_aminos)
+        elapsed_time = time.time() - begin_time
+        print("{},{},{},{},{},{}".format(count, elapsed_time, int("{}".format(model[cost])), int("{}".format(model[epsilon])),
+                                      [int("{}".format(model[delta[i]])) for i in range(num_of_seq)], int("{}".format(model[size]))))
 
         opt.add(Or([x[primer][pos][base] != opt.model()[x[primer][pos][base]] for base in bases for pos in range(base_length) for primer in range(num_of_seq)]))
 
