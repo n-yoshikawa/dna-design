@@ -55,15 +55,17 @@ def HammingDistance(str1, str2):
             dist += 1
     return dist
 
-def MinimumHammingDistance(amino1, amino2):
+def MinimumHammingDistance(centerBase, baseCandidates):
     minDist = sys.maxsize
     bestBase = None
-    for base in amino2.baseCandidates:
-        d = HammingDistance(amino1.base, base)
-        if d < minDist:
-            minDist = d
-            bestBase = base
-    return minDist, bestBase
+    d = [HammingDistance(centerBase, base) for base in baseCandidates]
+    idx = np.argmin(d)
+    return d[idx], baseCandidates[idx]
+
+def MinimumHammingDistance2(centerBase, baseCandidates):
+    minDist = sys.maxsize
+    bestBase = None
+    return min([HammingDistance(centerBase, base) for base in baseCandidates])
 
 class AminoAcid:
     def __init__(self, amino):
@@ -81,39 +83,41 @@ def clustering(aminos, k):
     # randomly initialize centroid
     centroids = np.random.choice(aminos, k, replace=False)
 
-    for step in range(1000):
+    for step in range(100):
         # assign cluster
         clusterIndexListOriginal = [a.cluster for a in aminos]
         for amino in aminos:
             minDist = sys.maxsize
             for clusterIndex, centroid in enumerate(centroids):
-                d, b = MinimumHammingDistance(centroid, amino)
+                d, b = MinimumHammingDistance(centroid.base, amino.baseCandidates)
                 if d < minDist:
                     minDist = d
                     amino.cluster = clusterIndex
                     amino.base = b
-        clusterIndexList = [a.cluster for a in aminos]
-        if clusterIndexList == clusterIndexListOriginal:
-            break
 
         clusters = [[] for _ in range(k)]
         for amino in aminos:
             clusters[amino.cluster].append(amino)
 
+        # convergence check
+        clusterIndexList = [a.cluster for a in aminos]
+        if clusterIndexList == clusterIndexListOriginal:
+            print("converged at step", step)
+            break
+
         # find centroid
+        centroidBaseListOriginal = [a.base for a in centroids]
         centroids = []
         for cluster in clusters:
             for centroid in cluster:
                 bestDist = sys.maxsize
                 bestCentroid = None
-                dist = 0
-                for amino in cluster:
-                    d, _ = MinimumHammingDistance(centroid, amino)
-                    dist += d
+                dist = sum([MinimumHammingDistance2(centroid.base, amino.baseCandidates) for amino in cluster])
                 if dist < bestDist:
                     bestDist = dist
                     bestCentroid = centroid
             centroids.append(bestCentroid)
+
     clusters = [[] for _ in range(k)]
     for amino in aminos:
         clusters[amino.cluster].append(amino)
@@ -256,22 +260,38 @@ def generated_amino(seqs):
     return ret
 
 def design(sequenceList, k):
-    clusters = clustering([AminoAcid(s) for s in sequenceList], k)
+    bestResultBases = None
+    bestGeneratedAminos = None
+    minScore = sys.maxsize
+    for trial in range(1000):
+        clusters = clustering([AminoAcid(s) for s in sequenceList], k)
 
-    resultBases = []
-    for cluster in clusters:
-        resultBase = ""
-        for i in range(len(cluster[0].base)):
-            appearedBase = []
-            for item in cluster:
-                appearedBase.append(item.base[i])
-            resultBase += getBaseName(set(appearedBase))
-        resultBases.append(resultBase)
+        resultBases = []
+        for cluster in clusters:
+            resultBase = ""
+            for i in range(len(cluster[0].base)):
+                appearedBase = []
+                for item in cluster:
+                    appearedBase.append(item.base[i])
+                resultBase += getBaseName(set(appearedBase))
+            resultBases.append(resultBase)
 
-    generatedAminos = []
-    for r in resultBases:
-        generatedAminos.append(generated_amino(split_n(r, 3)))
+        generatedAminos = []
+        for r in resultBases:
+            generatedAminos.append(generated_amino(split_n(r, 3)))
 
-    print(resultBases)
-    print(generatedAminos)
-    return (resultBases, generatedAminos)
+
+        score = sum([len(a) for a in generatedAminos])
+        print(resultBases)
+        print(generatedAminos)
+        print(score)
+        if score < minScore:
+            minScore = score
+            bestResultBases = resultBases
+            bestGeneratedAminos = generatedAminos
+        if minScore == len(sequenceList):
+            break
+    print("best result:")
+    print(bestResultBases)
+    print(bestGeneratedAminos)
+    return (list(set(bestResultBases)), [list(set(a)) for a in bestGeneratedAminos])
