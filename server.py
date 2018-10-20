@@ -1,6 +1,6 @@
 from flask import Flask, request, render_template, jsonify
 
-import dna_design
+#import dna_design
 import clustering
 
 app = Flask(__name__)

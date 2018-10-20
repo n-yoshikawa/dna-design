@@ -1,5 +1,6 @@
 import itertools
 import numpy as np
+from collections import Counter
 import sys
 
 def Amino2Codon(amino):
@@ -67,61 +68,6 @@ def MinimumHammingDistance2(centerBase, baseCandidates):
     bestBase = None
     return min([HammingDistance(centerBase, base) for base in baseCandidates])
 
-class AminoAcid:
-    def __init__(self, amino):
-        self.amino = amino
-        candidates = []
-        for c in amino:
-            candidates.append(Amino2Codon(c))
-        self.baseCandidates = [''.join(x) for x in itertools.product(*candidates)]
-        self.base = self.baseCandidates[0]
-        self.cluster = None
-    def __repr__(self):
-        return "<{}, {}, {}>".format(self.amino, self.base, self.cluster)
-
-def clustering(aminos, k):
-    # randomly initialize centroid
-    centroids = np.random.choice(aminos, k, replace=False)
-
-    for step in range(100):
-        # assign cluster
-        clusterIndexListOriginal = [a.cluster for a in aminos]
-        for amino in aminos:
-            minDist = sys.maxsize
-            for clusterIndex, centroid in enumerate(centroids):
-                d, b = MinimumHammingDistance(centroid.base, amino.baseCandidates)
-                if d < minDist:
-                    minDist = d
-                    amino.cluster = clusterIndex
-                    amino.base = b
-
-        clusters = [[] for _ in range(k)]
-        for amino in aminos:
-            clusters[amino.cluster].append(amino)
-
-        # convergence check
-        clusterIndexList = [a.cluster for a in aminos]
-        if clusterIndexList == clusterIndexListOriginal:
-            print("converged at step", step)
-            break
-
-        # find centroid
-        centroidBaseListOriginal = [a.base for a in centroids]
-        centroids = []
-        for cluster in clusters:
-            for centroid in cluster:
-                bestDist = sys.maxsize
-                bestCentroid = None
-                dist = sum([MinimumHammingDistance2(centroid.base, amino.baseCandidates) for amino in cluster])
-                if dist < bestDist:
-                    bestDist = dist
-                    bestCentroid = centroid
-            centroids.append(bestCentroid)
-
-    clusters = [[] for _ in range(k)]
-    for amino in aminos:
-        clusters[amino.cluster].append(amino)
-    return clusters
 
 def getBaseName(baseSet):
     if baseSet == set(['A']):
@@ -244,6 +190,56 @@ codon["GGC"] = 'G'
 codon["GGA"] = 'G'
 codon["GGG"] = 'G'
 
+class AminoAcid:
+    def __init__(self, amino):
+        self.amino = amino
+        candidates = []
+        for c in amino:
+            candidates.append(Amino2Codon(c))
+        self.bases = [''.join(x) for x in itertools.product(*candidates)]
+        self.cluster = None
+    def __repr__(self):
+        return "<{}, {}, {}>".format(self.amino, self.base, self.cluster)
+
+def clustering(aminos, k):
+    # initialization
+    baseLen = len(aminos[0].bases[0])
+    bases = [np.random.choice(a.bases) for a in aminos]
+    centroids = np.random.choice(bases, k, replace=False)
+
+    previousClusters = [[] for _ in range(k)]
+    for step in range(1000):
+        # assignment step
+        clusters = [[] for _ in range(k)]
+        for amino in aminos:
+            minDist = sys.maxsize
+            minCluster = -1
+            minBase = None
+            for clusterIndex, centroid in enumerate(centroids):
+                d, b = MinimumHammingDistance(centroid, amino.bases)
+                if d < minDist:
+                    minBase = b
+                    minCluster = clusterIndex
+                    minDist = d
+            clusters[minCluster].append(minBase)
+
+        # convergence check
+        if clusters == previousClusters:
+            break
+        previousClusters = clusters
+
+        # update step
+        centroids = ["" for _ in range(k)]
+        for i, cluster in enumerate(clusters):
+            for j in range(baseLen):
+                centroids[i] += Counter([base[j] for base in cluster]).most_common()[0][0]
+
+    # generate covering primer
+    primers = ["" for _ in range(k)]
+    for i, cluster in enumerate(clusters):
+        for j in range(len(cluster[0])):
+            primers[i] += getBaseName(set([b[j] for b in cluster]))
+    return primers
 
 def generated_amino(seqs):
     cands = []
@@ -263,23 +259,12 @@ def design(sequenceList, k):
     bestResultBases = None
     bestGeneratedAminos = None
     minScore = sys.maxsize
-    for trial in range(1000):
-        clusters = clustering([AminoAcid(s) for s in sequenceList], k)
-
-        resultBases = []
-        for cluster in clusters:
-            resultBase = ""
-            for i in range(len(cluster[0].base)):
-                appearedBase = []
-                for item in cluster:
-                    appearedBase.append(item.base[i])
-                resultBase += getBaseName(set(appearedBase))
-            resultBases.append(resultBase)
+    for trial in range(10):
+        resultBases = clustering([AminoAcid(s) for s in sequenceList], k)
 
         generatedAminos = []
         for r in resultBases:
             generatedAminos.append(generated_amino(split_n(r, 3)))
-
 
         score = sum([len(a) for a in generatedAminos])
         print(resultBases)
