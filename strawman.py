@@ -5,45 +5,45 @@ import sys
 
 def Amino2Codon(amino):
     if amino == 'A':
-        return ('GCA', 'GCC', 'GCG', 'GCU')
+        return ('GCG',)
     if amino == 'R':
-        return ('CGA', 'CGC', 'CGG', 'CGU', 'AGA', 'AGG')
+        return ('CGC',)
     if amino == 'N':
-        return ('AAU', 'AAC')
+        return ('AAU',)
     if amino == 'D':
-        return ('GAU', 'GAC')
+        return ('GAU',)
     if amino == 'C':
-        return ('UGU', 'UGC')
+        return ('UGC',)
     if amino == 'Q':
-        return ('CAA', 'CAG')
+        return ('CAG',)
     if amino == 'E':
-        return ('GAA', 'GAG')
+        return ('GAA',)
     if amino == 'G':
-        return ('GGA', 'GGC', 'GGG', 'GGU')
+        return ('GGC',)
     if amino == 'H':
-        return ('CAC', 'CAU')
+        return ('CAU',)
     if amino == 'I':
-        return ('AUA', 'AUC', 'AUU')
+        return ('AUU',)
     if amino == 'L':
-        return ('UUA', 'UUG', 'CUA', 'CUC', 'CUG', 'CUU')
+        return ('CUG',)
     if amino == 'K':
-        return ('AAA', 'AAG')
+        return ('AAA',)
     if amino == 'M':
         return ('AUG',)
     if amino == 'F':
-        return ('UUU', 'UUC')
+        return ('UUU',)
     if amino == 'P':
-        return ('CCA', 'CCC', 'CCG', 'CCU')
+        return ('CCG',)
     if amino == 'S':
-        return ('AGC', 'AGU', 'UCA', 'UCC', 'UCG', 'UCU')
+        return ('AGC',)
     if amino == 'T':
-        return ('ACA', 'ACC', 'ACG', 'ACU')
+        return ('ACC',)
     if amino == 'W':
         return ('UGG',)
     if amino == 'Y':
-        return ('UAU', 'UAC')
+        return ('UAU',)
     if amino == 'V':
-        return ('GUA', 'GUC', 'GUG', 'GUU')
+        return ('GUG',)
     else:
         raise ValueError("Unknown amino acid")
 

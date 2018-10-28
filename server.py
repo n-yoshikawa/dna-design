@@ -19,9 +19,14 @@ def hello():
     result_base, generated_aminos = clustering.design(sequence_list, n)
     
     results = []
+    print("sequence_list:", sequence_list)
     for base, amino in zip(result_base, generated_aminos):
-        results.append({"base": base,
-                        "amino": amino})
+        print(base)
+        print(amino)
+        results.append({
+            "base": base,
+            "amino": [{"seq": a, "isTarget": a in sequence_list} for a in amino],
+            "count": sum([a in sequence_list for a in amino])})
     data = {
         "results": results,
         "sequences": sequence_list
