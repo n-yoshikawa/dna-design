@@ -79,14 +79,22 @@
       <table class="table">
         <thead>
           <tr>
-            <th>Sequence</th>
-            <td>Generated Amino acids</td>
-            <td># of target aminos / # of generated aminos</td>
+            <td>Compressed codon</td>
+            <td>Exploded codon</td>
+            <td>Generated Amino acid</td>
+            <td>target / library size</td>
           </tr>
         </thead>
         <tbody>
           <tr v-for="result in results">
             <th>[[ result.base ]]</th>
+            <td>
+              <ul>
+                <li v-for="a in result.amino">
+                  <span>[[ a.codon ]]</span>
+                </li>
+              </ul>
+            </td>
             <td>
               <ul>
                 <li v-for="a in result.amino">

@@ -246,16 +246,20 @@ def clustering(aminos, k):
     return primers
 
 def generated_amino(seqs):
-    cands = []
+    aminos = []
+    codons = []
     for seq in seqs:
-        cand = []
+        a = []
+        c = []
         for b1 in baselist[seq[0]]:
             for b2 in baselist[seq[1]]:
                 for b3 in baselist[seq[2]]:
-                    cand.append(codon[b1+b2+b3])
-        cands.append(cand)
+                    a.append(codon[b1+b2+b3])
+                    c.append(b1+b2+b3)
+        aminos.append(a)
+        codons.append(c)
 
-    ret = [''.join(x) for x in itertools.product(*cands)]
+    ret = [(''.join(x), ''.join(y)) for x, y in zip(itertools.product(*codons), itertools.product(*aminos))]
 
     return ret
 
@@ -263,7 +267,7 @@ def design(sequenceList, k):
     bestResultBases = None
     bestGeneratedAminos = None
     minScore = sys.maxsize
-    for trial in range(100):
+    for trial in range(5000):
         try:
             resultBases = clustering([AminoAcid(s) for s in sequenceList], k)
         except ValueError as e:
@@ -284,13 +288,16 @@ def design(sequenceList, k):
             bestGeneratedAminos = generatedAminos
         if minScore == len(sequenceList):
             break
-    #print("best result:")
-    #print(bestResultBases)
-    #print(bestGeneratedAminos)
-    returnAminoList = []
-    for aminos in bestGeneratedAminos:
-        l = sorted(list(set(aminos)))
-        l = [a for a in l if a in sequenceList] + [a for a in l if a not in sequenceList]
-        returnAminoList.append(l)
+
+    print("best result:")
+    print(bestResultBases)
+    print(bestGeneratedAminos)
+
+    returnAminoList = bestGeneratedAminos
+    #returnAminoList = []
+    #for aminos in bestGeneratedAminos:
+    #    l = sorted(list(set(aminos)))
+    #    l = [a for a in l if a in sequenceList] + [a for a in l if a not in sequenceList]
+    #    returnAminoList.append(l)
     print("score: {}".format(sum([len(l) for l in returnAminoList])))
     return (bestResultBases, returnAminoList)

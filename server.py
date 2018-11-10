@@ -25,8 +25,8 @@ def hello():
         print(amino)
         results.append({
             "base": base,
-            "amino": [{"seq": a, "isTarget": a in sequence_list} for a in amino],
-            "count": sum([a in sequence_list for a in amino])})
+            "amino": [{"codon": a[0], "seq": a[1], "isTarget": a[1] in sequence_list} for a in amino],
+            "count": sum([a[1] in sequence_list for a in amino])})
     data = {
         "results": results,
         "sequences": sequence_list
