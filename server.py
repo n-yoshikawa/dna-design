@@ -49,4 +49,4 @@ import sys
 sys.stdout = Unbuffered(sys.stdout)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5555)

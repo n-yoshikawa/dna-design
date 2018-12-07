@@ -3,6 +3,8 @@ import numpy as np
 from collections import Counter
 import sys
 
+import fastclustering
+
 def Amino2Codon(amino):
     if amino == 'A':
         return ('GCA', 'GCC', 'GCG', 'GCU')
@@ -190,14 +192,17 @@ codon["GGC"] = 'G'
 codon["GGA"] = 'G'
 codon["GGG"] = 'G'
 
+def initAminoAcid(obj, amino):
+    obj.amino = amino
+    candidates = []
+    for c in amino:
+        candidates.append(Amino2Codon(c))
+    obj.bases = [''.join(x) for x in itertools.product(*candidates)]
+
 class AminoAcid:
-    def __init__(self, amino):
-        self.amino = amino
-        candidates = []
-        for c in amino:
-            candidates.append(Amino2Codon(c))
-        self.bases = [''.join(x) for x in itertools.product(*candidates)]
-        self.cluster = None
+    def __init__(self):
+        self.amino = None
+        self.bases = None
     def __repr__(self):
         return "<{}, {}, {}>".format(self.amino, self.base, self.cluster)
 
@@ -233,16 +238,36 @@ def clustering(aminos, k):
         for i, cluster in enumerate(clusters):
             for j in range(baseLen):
                 if len(cluster) == 0:
-                    raise ValueError("There is empty cluster!")
+                    raise ValueError("There is an empty cluster!")
                 centroids[i] += Counter([base[j] for base in cluster]).most_common()[0][0]
+
+        # score
+        surrogate_score = 0
+        for cluster, centroid in zip(clusters, centroids):
+            for b in cluster:
+                surrogate_score += HammingDistance(b, centroid)
+        primers = ["" for _ in range(k)]
+        for i, cluster in enumerate(clusters):
+            for j in range(len(cluster[0])):
+                if len(cluster) == 0:
+                    raise ValueError("There is an empty cluster!")
+                primers[i] += getBaseName(set([b[j] for b in cluster]))
+
+        generatedAminos = []
+        for r in primers:
+            generatedAminos.append(generated_amino(split_n(r, 3)))
+        actual_score = sum([len(a) for a in generatedAminos])
+        #print("iteration {}, {}, {}".format(step, actual_score, surrogate_score))
 
     # generate covering primer
     primers = ["" for _ in range(k)]
     for i, cluster in enumerate(clusters):
         for j in range(len(cluster[0])):
             if len(cluster) == 0:
-                raise ValueError("There is empty cluster!")
+                raise ValueError("There is an empty cluster!")
             primers[i] += getBaseName(set([b[j] for b in cluster]))
+    score = sum([len(a) for a in generatedAminos])
+    #print("final score:", score)
     return primers
 
 def generated_amino(seqs):
@@ -267,9 +292,15 @@ def design(sequenceList, k):
     bestResultBases = None
     bestGeneratedAminos = None
     minScore = sys.maxsize
-    for trial in range(5000):
+    for trial in range(100):
+        print(trial)
         try:
-            resultBases = clustering([AminoAcid(s) for s in sequenceList], k)
+            aminos = []
+            for s in sequenceList:
+                a = fastclustering.aminoAcid()
+                initAminoAcid(a, s)
+                aminos.append(a)
+            resultBases = fastclustering.clustering(aminos, k)
         except ValueError as e:
             print(e)
             continue
