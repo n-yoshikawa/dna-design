@@ -118,73 +118,99 @@ T mostCommonElement(const std::vector<T> &array) {
     return max_val;
 }
 
-std::vector<std::string> clustering(std::vector<aminoAcid> &aminos, int k) {
-    std::random_device rnd;
-    std::mt19937 mt(rnd()); 
+std::tuple<int, std::vector<std::string>> kClustering(std::vector<aminoAcid> &aminos, int k, int max_trial=100) {
+    static std::random_device rnd;
+    static std::mt19937 mt(rnd()); 
 
     const int baseLen = aminos[0].bases[0].size();
 
-    // Randomly nitialize centroids
-    std::vector<aminoAcid> kAminos = sampleWithoutReplacement(aminos, k);
-    std::vector<std::string> centroids;
-    for(auto &amino : kAminos) {
-        centroids.push_back(sampleOne(amino.bases));
-    }
+    assert(k > 0 && k <= static_cast<int>(aminos.size()));
 
-    std::vector<std::vector<std::string>> clusters(k);
-
-    for (int step = 0; step < 5; ++step) {
-        //std::cout << "Centroids:" << std::endl;
-        //for (auto &c : centroids) {
-        //    std::cout << c << std::endl;
-        //}
-        // assignment step
-        clusters.clear(); clusters.resize(k);
-        for (auto &amino : aminos) {
-            int minDist = std::numeric_limits<int>::max();
-            int minCluster = -1;
-            std::string minBase;
-            for (size_t c = 0; c < centroids.size(); ++c) {
-                auto t = minimumHammingDistance(centroids[c], amino.bases);
-                int d = std::get<0>(t);
-                std::string b = std::get<1>(t);
-                if (d < minDist) {
-                    minBase = b;
-                    minCluster = c;
-                    minDist = d;
-                }
-            }
-            clusters[minCluster].push_back(minBase);
+    std::vector<std::vector<std::string>> bestClusters(k);
+    int bestScore = std::numeric_limits<int>::max();
+    
+    for (int trial=0; trial<max_trial; ++trial) {
+        // Randomly nitialize centroids
+        std::vector<aminoAcid> kAminos = sampleWithoutReplacement(aminos, k);
+        std::vector<std::string> centroids;
+        for(auto &amino : kAminos) {
+            centroids.push_back(sampleOne(amino.bases));
         }
 
-        //for(auto &cluster : clusters) {
-        //    std::cout << "cluster size: " << cluster.size() << std::endl;
-        //    for (auto &c : cluster) {
-        //        std::cout << c << ",";
-        //    }
-        //    std::cout << std::endl;
-        //}
+        std::vector<std::vector<std::string>> clusters(k);
+
+        bool isFail = false;
+        for (int step = 0; step < 10; ++step) {
+            // assignment step
+            clusters.clear(); clusters.resize(k);
+            for (auto &amino : aminos) {
+                int minDist = std::numeric_limits<int>::max();
+                int minCluster = -1;
+                std::string minBase;
+                for (size_t c = 0; c < centroids.size(); ++c) {
+                    auto t = minimumHammingDistance(centroids[c], amino.bases);
+                    int d = std::get<0>(t);
+                    std::string b = std::get<1>(t);
+                    if (d < minDist) {
+                        minBase = b;
+                        minCluster = c;
+                        minDist = d;
+                    }
+                }
+                clusters[minCluster].push_back(minBase);
+            }
+
+            // Update step
+            centroids.clear(); centroids.resize(k);
+            bool existEmpty = false;
+            for (size_t i=0; i<clusters.size(); ++i) {
+                auto &cluster = clusters[i];
+                if(cluster.empty()) {
+                    existEmpty = true;
+                    break;
+                }
+                for (int j=0; j<baseLen; ++j) {
+                    std::vector<char> tmp(cluster.size());
+                    for (size_t p=0; p<cluster.size(); ++p) {
+                        tmp[p] = cluster[p][j];
+                    }
+                    std::sort(tmp.begin(), tmp.end());
+                    centroids[i] += mostCommonElement(tmp);
+                }
+            }
+            if(existEmpty) {
+                isFail = true;
+                break;
+            }
+        }
+        if (isFail) continue;
         
-        // Update step
-        centroids.clear(); centroids.resize(k);
+        int score = 0;
         for (size_t i=0; i<clusters.size(); ++i) {
             auto &cluster = clusters[i];
-            assert(!cluster.empty());
+            int subScore = 1;
             for (int j=0; j<baseLen; ++j) {
-                std::vector<char> tmp(cluster.size());
+                std::set<char> B;
                 for (size_t p=0; p<cluster.size(); ++p) {
-                    tmp[p] = cluster[p][j];
+                    B.insert(cluster[p][j]);
                 }
-                std::sort(tmp.begin(), tmp.end());
-                centroids[i] += mostCommonElement(tmp);
+                subScore *= B.size();
             }
+            score += subScore;
+        }
+        if(score < bestScore) {
+            bestScore = score;
+            bestClusters = clusters;
         }
     }
 
     std::vector<std::string> primers(k);
-    for (size_t i=0; i<clusters.size(); ++i) {
-        auto &cluster = clusters[i];
-        assert(!cluster.empty());
+    for (size_t i=0; i<bestClusters.size(); ++i) {
+        auto &cluster = bestClusters[i];
+        if(cluster.empty()) {
+            bestScore = -1;
+            break;
+        }
         for (int j=0; j<baseLen; ++j) {
             std::set<char> B;
             for (size_t p=0; p<cluster.size(); ++p) {
@@ -194,7 +220,32 @@ std::vector<std::string> clustering(std::vector<aminoAcid> &aminos, int k) {
         }
     }
 
-    return primers;
+    return std::make_tuple(bestScore, primers);
+}
+
+std::vector<std::string> clustering(std::vector<aminoAcid> &aminos, int k, int max_trial=100) {
+    if (k > 0) {
+        std::tuple<int, std::vector<std::string>> result = kClustering(aminos, k, max_trial);
+        return std::get<1>(result);
+    } else {
+        int ng = 0;
+        int ok = aminos.size();
+        int score_ub = aminos.size() * 1.5;
+        std::tuple<int, std::vector<std::string>> result;
+        while (std::abs(ok - ng) > 1) {
+            int mid = (ok + ng) / 2;
+            auto trialResult = kClustering(aminos, mid, max_trial);
+            int score = std::get<0>(trialResult);
+            std::cout << "k: " << mid << ", score: " << score << std::endl;
+            if (score >= 0 && score < score_ub) {
+                ok = mid;
+                result = trialResult;
+            } else {
+                ng = mid;
+            }
+        }
+        return std::get<1>(result);
+    }
 }
 
 PYBIND11_MODULE(fastclustering, m) {
@@ -203,5 +254,7 @@ PYBIND11_MODULE(fastclustering, m) {
         .def(py::init<>())
         .def_readwrite("amino", &aminoAcid::amino)
         .def_readwrite("bases", &aminoAcid::bases);
-    m.def("clustering", &clustering);
+    m.def("clustering", &clustering, 
+          py::arg("aminos"), py::arg("k"), py::arg("max_trial")=100);
 }
+

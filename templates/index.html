@@ -36,6 +36,7 @@
             <div class="control">
               <div class="select">
                 <select v-model="formData.number">
+                  <option>auto</option>
                   <option>1</option>
                   <option>2</option>
                   <option>3</option>
@@ -90,14 +91,14 @@
             <th>[[ result.base ]]</th>
             <td>
               <ul>
-                <li v-for="a in result.amino">
+                <li style="height:1.5em" v-for="a in result.amino">
                   <span>[[ a.codon ]]</span>
                 </li>
               </ul>
             </td>
             <td>
               <ul>
-                <li v-for="a in result.amino">
+                <li style="height:1.5em" v-for="a in result.amino">
                   <template v-if="a.isTarget">
                     <span class="icon has-text-success">
                       <i class="fas fa-check-square"></i>

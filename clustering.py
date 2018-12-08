@@ -207,6 +207,7 @@ class AminoAcid:
         return "<{}, {}, {}>".format(self.amino, self.base, self.cluster)
 
 def clustering(aminos, k):
+    print(k)
     # initialization
     baseLen = len(aminos[0].bases[0])
     bases = [np.random.choice(a.bases) for a in aminos]
@@ -292,43 +293,19 @@ def design(sequenceList, k):
     bestResultBases = None
     bestGeneratedAminos = None
     minScore = sys.maxsize
-    for trial in range(100):
-        print(trial)
-        try:
-            aminos = []
-            for s in sequenceList:
-                a = fastclustering.aminoAcid()
-                initAminoAcid(a, s)
-                aminos.append(a)
-            resultBases = fastclustering.clustering(aminos, k)
-        except ValueError as e:
-            print(e)
-            continue
+    try:
+        aminos = []
+        for s in sequenceList:
+            a = fastclustering.aminoAcid()
+            initAminoAcid(a, s)
+            aminos.append(a)
+        resultBases = fastclustering.clustering(aminos, k)
+    except ValueError as e:
+        print(e)
+        exit()
 
-        generatedAminos = []
-        for r in resultBases:
-            generatedAminos.append(generated_amino(split_n(r, 3)))
+    generatedAminos = []
+    for r in resultBases:
+        generatedAminos.append(generated_amino(split_n(r, 3)))
 
-        score = sum([len(a) for a in generatedAminos])
-        #print(resultBases)
-        #print(generatedAminos)
-        #print(score)
-        if score < minScore:
-            minScore = score
-            bestResultBases = resultBases
-            bestGeneratedAminos = generatedAminos
-        if minScore == len(sequenceList):
-            break
-
-    print("best result:")
-    print(bestResultBases)
-    print(bestGeneratedAminos)
-
-    returnAminoList = bestGeneratedAminos
-    #returnAminoList = []
-    #for aminos in bestGeneratedAminos:
-    #    l = sorted(list(set(aminos)))
-    #    l = [a for a in l if a in sequenceList] + [a for a in l if a not in sequenceList]
-    #    returnAminoList.append(l)
-    print("score: {}".format(sum([len(l) for l in returnAminoList])))
-    return (bestResultBases, returnAminoList)
+    return (resultBases, generatedAminos)
