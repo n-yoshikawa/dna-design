@@ -3,7 +3,8 @@ import numpy as np
 from collections import Counter
 import sys
 
-import fastclustering
+import codoncompressor
+
 
 def Amino2Codon(amino):
     if amino == 'A':
@@ -49,6 +50,7 @@ def Amino2Codon(amino):
     else:
         raise ValueError("Unknown amino acid")
 
+
 def HammingDistance(str1, str2):
     if len(str1) != len(str2):
         raise ValueError("The length is not the same.")
@@ -58,12 +60,14 @@ def HammingDistance(str1, str2):
             dist += 1
     return dist
 
+
 def MinimumHammingDistance(centerBase, baseCandidates):
     minDist = sys.maxsize
     bestBase = None
     d = [HammingDistance(centerBase, base) for base in baseCandidates]
     idx = np.argmin(d)
     return d[idx], baseCandidates[idx]
+
 
 def MinimumHammingDistance2(centerBase, baseCandidates):
     minDist = sys.maxsize
@@ -105,8 +109,10 @@ def getBaseName(baseSet):
     else:
         raise ValueError("Unknown amino acid")
 
+
 def split_n(text, n):
     return [text[i*n:i*n+n] for i in range(len(text)//n)]
+
 
 baselist = {}
 baselist['A'] = ['A']
@@ -192,6 +198,7 @@ codon["GGC"] = 'G'
 codon["GGA"] = 'G'
 codon["GGG"] = 'G'
 
+
 def initAminoAcid(obj, amino):
     obj.amino = amino
     candidates = []
@@ -199,12 +206,15 @@ def initAminoAcid(obj, amino):
         candidates.append(Amino2Codon(c))
     obj.bases = [''.join(x) for x in itertools.product(*candidates)]
 
+
 class AminoAcid:
     def __init__(self):
         self.amino = None
         self.bases = None
+
     def __repr__(self):
         return "<{}, {}, {}>".format(self.amino, self.base, self.cluster)
+
 
 def clustering(aminos, k):
     print(k)
@@ -240,7 +250,8 @@ def clustering(aminos, k):
             for j in range(baseLen):
                 if len(cluster) == 0:
                     raise ValueError("There is an empty cluster!")
-                centroids[i] += Counter([base[j] for base in cluster]).most_common()[0][0]
+                centroids[i] += Counter([base[j]
+                                         for base in cluster]).most_common()[0][0]
 
         # score
         surrogate_score = 0
@@ -271,6 +282,7 @@ def clustering(aminos, k):
     #print("final score:", score)
     return primers
 
+
 def generated_amino(seqs):
     aminos = []
     codons = []
@@ -285,21 +297,23 @@ def generated_amino(seqs):
         aminos.append(a)
         codons.append(c)
 
-    ret = [(''.join(x), ''.join(y)) for x, y in zip(itertools.product(*codons), itertools.product(*aminos))]
+    ret = [(''.join(x), ''.join(y)) for x, y in zip(
+        itertools.product(*codons), itertools.product(*aminos))]
 
     return ret
 
-def design(sequenceList, k):
+
+def design(sequenceList, k, scale):
     bestResultBases = None
     bestGeneratedAminos = None
     minScore = sys.maxsize
     try:
         aminos = []
         for s in sequenceList:
-            a = fastclustering.aminoAcid()
+            a = codoncompressor.aminoAcid()
             initAminoAcid(a, s)
             aminos.append(a)
-        resultBases = fastclustering.clustering(aminos, k)
+        resultBases = codoncompressor.clustering(aminos, k, 1000, scale)
     except ValueError as e:
         print(e)
         exit()
