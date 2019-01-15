@@ -85,7 +85,30 @@
       </form>
     </div>
     <div v-if="seen" class="container" style="margin-top: 40px">
-      <h2 class="subtitle">Results</h2>
+      <div class="container">
+        <h2 class="title is-spaced">Results</h2>
+        <div class="content">
+          <ul>
+            <li><strong>Total library size:</strong> [[ size ]]</li>
+          </ul>
+        </div>
+        <table class="table">
+          <thead>
+            <tr>
+              <td>Compressed codon</td>
+              <td>target / library size</td>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="result in results">
+              <th>[[ result.base ]]</th>
+              <td> [[result.count]] / [[ result.amino.length ]] </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="is-divider"></div>
+      <h3 class="subtitle is-spaced">Detail</h2>
       <table class="table">
         <thead>
           <tr>
@@ -152,6 +175,7 @@ const vm = new Vue({
         .then(response => {
           this.results = response.data.results;
           this.sequences = response.data.sequences;
+          this.size = response.data.size;
           this.seen = true;
         })
       .catch(error => {

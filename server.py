@@ -25,16 +25,20 @@ def hello():
 
     results = []
     # print("sequence_list:", sequence_list)
+    size = 0
     for base, amino in zip(result_base, generated_aminos):
         # print(base)
         # print(amino)
         results.append({
             "base": base,
             "amino": [{"codon": a[0], "seq": a[1], "isTarget": a[1] in sequence_list} for a in amino],
-            "count": sum([a[1] in sequence_list for a in amino])})
+            "count": sum([a[1] in sequence_list for a in list(set(amino))])})
+        size += len(amino)
+        print(len(amino))
     data = {
         "results": results,
-        "sequences": sequence_list
+        "sequences": sequence_list,
+        "size": size
     }
     return jsonify(data)
 
